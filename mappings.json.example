@@ -1,0 +1,10 @@
+[
+  {
+    "telegramChannel": "-100123456789",
+    "slackChannel": "C01234ABCDE"
+  },
+  {
+    "telegramChannel": "-100987654321",
+    "slackChannel": "C09876ZYXWV"
+  }
+]
