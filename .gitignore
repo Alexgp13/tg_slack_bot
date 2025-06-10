@@ -1,0 +1,35 @@
+# Environment variables
+.env
+.env.prod
+.env.local
+.env.development
+
+# Node modules
+node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Runtime data
+data/
+
+# Dependency directories
+jspm_packages/
+
+# Distribution directories
+dist/
+
+# Docker volumes
+docker-volumes/
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS specific files
+.DS_Store
+Thumbs.db
