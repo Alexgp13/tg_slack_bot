@@ -10,10 +10,11 @@ class TelegramBotHandler {
   }
 
   start() {
-    console.log('Starting Telegram bot...');
+    console.log('Starting Telegram bot v0.1.1a...');
     
     // Listen for messages from channels
-    this.bot.on('channel_post', async (msg) => {
+    this.bot.on('message', async (msg) => {
+      //console.log("Telegram channel message received: "+msg.chat.id+" / text:"+msg.text);
       try {
         await this.handleChannelMessage(msg);
       } catch (error) {
@@ -22,7 +23,8 @@ class TelegramBotHandler {
     });
 
     // Listen for updates to channel messages
-    this.bot.on('edited_channel_post', async (msg) => {
+    this.bot.on('edited_message', async (msg) => {
+      //console.log("Telegram edited channel message received: "+msg.chat.id+" / text:"+msg.text);
       try {
         await this.handleEditedChannelMessage(msg);
       } catch (error) {
@@ -39,10 +41,14 @@ class TelegramBotHandler {
   async handleChannelMessage(msg) {
     const telegramChannelId = msg.chat.id.toString();
     // Get mapped Slack channel
-    const slackChannelId = this.mappingService.getSlackChannelForTelegramChannel(telegramChannelId);
+    const slackChannelId = await this.mappingService.getSlackChannelForTelegramChannel(telegramChannelId);
     
     if (!slackChannelId) {
+      console.log("No mapping found for Telegram channel "+telegramChannelId+" - ignoring message.")
       return; // No mapping found for this channel
+    }
+    else {
+      //console.log("Mapping found for Telegram channel "+telegramChannelId+" - posting message to Slack channel "+slackChannelId+".")
     }
 
     // Format the message for Slack
@@ -127,6 +133,7 @@ class TelegramBotHandler {
     
     if (msg.text) {
       messageText += msg.text;
+      console.log("Message from chat:"+msg.chat+" / text:"+msg.text);
     }
     
     // Update the message in Slack

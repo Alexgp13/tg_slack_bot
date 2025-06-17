@@ -34,7 +34,10 @@ This bot allows cross-posting messages between Telegram channels and Slack chann
    cp .env.example .env
    ```
 4. Edit `.env` with your Telegram and Slack tokens
-5. Configure admin users by adding their Slack user IDs to the `SLACK_ADMINS` setting in the `.env` file (comma-separated)
+5. Add your Slack workspace URL to the `SLACK_WORKSPACE_URL` setting in the `.env` file
+   - This is required for creating clickable links to Slack channels in Telegram messages
+   - The URL should be in the format `https://your-workspace.slack.com`
+6. Configure admin users by adding their Slack user IDs to the `SLACK_ADMINS` setting in the `.env` file (comma-separated)
    - You can find a user's ID in Slack by viewing their profile and clicking the "..." menu, then "Copy member ID"
    - Only these users will be able to add or remove channel mappings
 

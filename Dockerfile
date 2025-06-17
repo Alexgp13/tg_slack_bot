@@ -9,6 +9,9 @@ RUN npm install --production
 # Copy application code
 COPY . .
 
+# Added volume for mappings.json persistence
+VOLUME ["/mappings"]
+
 # Set environment variables
 ENV NODE_ENV=production
 

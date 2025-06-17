@@ -1,4 +1,6 @@
 const fs = require('fs');
+const fsPromises = require('fs/promises');
+const { existsSync } = fs;
 //const path = require('path');
 
 class MappingService {
@@ -7,19 +9,22 @@ class MappingService {
     this.mappings = [];
     this.messageIdMappings = new Map(); // For tracking message IDs across platforms
     
-    this.loadMappings();
+    // Initialize asynchronously
+    this.initialized = this.loadMappings().catch(err => {
+      console.error('Failed to initialize MappingService:', err);
+    });
   }
 
-  loadMappings() {
+  async loadMappings() {
     try {
-      if (fs.existsSync(this.mappingsFile)) {
-        const data = fs.readFileSync(this.mappingsFile, 'utf8');
+      if (existsSync(this.mappingsFile)) {
+        const data = await fsPromises.readFile(this.mappingsFile, 'utf8');
         this.mappings = JSON.parse(data);
         console.log(`Loaded ${this.mappings.length} mappings from ${this.mappingsFile}`);
       } else {
         console.log(`No mappings file found at ${this.mappingsFile}. Starting with empty mappings.`);
         this.mappings = [];
-        this.saveMappings(); // Create an empty mappings file
+        await this.saveMappings(); // Create an empty mappings file
       }
     } catch (error) {
       console.error('Error loading mappings:', error);
@@ -27,20 +32,25 @@ class MappingService {
     }
   }
 
-  saveMappings() {
+  async saveMappings() {
     try {
-      fs.writeFileSync(this.mappingsFile, JSON.stringify(this.mappings, null, 2), 'utf8');
+      await fsPromises.writeFile(this.mappingsFile, JSON.stringify(this.mappings, null, 2), 'utf8');
       console.log(`Saved ${this.mappings.length} mappings to ${this.mappingsFile}`);
     } catch (error) {
       console.error('Error saving mappings:', error);
     }
   }
 
-  getAllMappings() {
+  async getAllMappings() {
+    // Ensure initialization is complete
+    await this.initialized;
     return [...this.mappings];
   }
 
-  addMapping(telegramChannelId, slackChannelId) {
+  async addMapping(telegramChannelId, slackChannelId) {
+    // Ensure initialization is complete
+    await this.initialized;
+    
     // Check if mapping already exists
     const existingMapping = this.mappings.find(
       mapping => 
@@ -57,10 +67,36 @@ class MappingService {
       slackChannel: slackChannelId
     });
     
-    this.saveMappings();
+    await this.saveMappings();
+  }
+  
+  async createFile(fileName) {
+    try {
+      // Create the directory structure if it doesn't exist
+      const dirName = require('path').dirname(fileName);
+      if (dirName !== '.') {
+        await fsPromises.mkdir(dirName, { recursive: true });
+      }
+      
+      // Create an empty file
+      await fsPromises.writeFile(fileName, '', { flag: 'wx' });
+      console.log(`File created successfully: ${fileName}`);
+      return true;
+    } catch (error) {
+      if (error.code === 'EEXIST') {
+        console.log(`File already exists: ${fileName}`);
+        return false;
+      } else {
+        console.error(`Error creating file ${fileName}:`, error);
+        throw error;
+      }
+    }
   }
 
-  removeMapping(telegramChannelId, slackChannelId) {
+  async removeMapping(telegramChannelId, slackChannelId) {
+    // Ensure initialization is complete
+    await this.initialized;
+    
     const initialLength = this.mappings.length;
     
     this.mappings = this.mappings.filter(
@@ -73,15 +109,19 @@ class MappingService {
       throw new Error('Mapping not found');
     }
     
-    this.saveMappings();
+    await this.saveMappings();
   }
 
-  getSlackChannelForTelegramChannel(telegramChannelId) {
+  async getSlackChannelForTelegramChannel(telegramChannelId) {
+    // Ensure initialization is complete
+    await this.initialized;
     const mapping = this.mappings.find(m => m.telegramChannel === telegramChannelId);
     return mapping ? mapping.slackChannel : null;
   }
 
-  getTelegramChannelForSlackChannel(slackChannelId) {
+  async getTelegramChannelForSlackChannel(slackChannelId) {
+    // Ensure initialization is complete
+    await this.initialized;
     const mapping = this.mappings.find(m => m.slackChannel === slackChannelId);
     return mapping ? mapping.telegramChannel : null;
   }

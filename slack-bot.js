@@ -13,6 +13,9 @@ class SlackBotHandler {
     this.mappingService = mappingService;
     this.telegramBot = null; // This will be set via setTelegramBot method
     
+    // Get the Slack workspace URL from environment variable or use a default format
+    this.slackWorkspaceUrl = process.env.SLACK_WORKSPACE_URL || 'https://app.slack.com';
+    
     // Parse admin user IDs from environment variable
     this.adminUsers = (process.env.SLACK_ADMINS || '').split(',').filter(id => id.trim() !== '');
     
@@ -36,6 +39,7 @@ class SlackBotHandler {
     
     // Listen to messages in channels
     this.app.message(async ({ message, client }) => {
+      console.log("Slack channel message received: "+message.channel+" / text:"+message.text);
       try {
         // Ignore bot messages to prevent loops
         if (message.subtype === 'bot_message' || message.bot_id) {
@@ -64,14 +68,17 @@ class SlackBotHandler {
   }
 
   async handleChannelMessage(message, client) {
+    //console.log("Slack channel message handling: "+message.channel+" / text:"+message.text);
     const slackChannelId = message.channel;
     
     // Get mapped Telegram channel
-    const telegramChannelId = this.mappingService.getTelegramChannelForSlackChannel(slackChannelId);
+    const telegramChannelId = await this.mappingService.getTelegramChannelForSlackChannel(slackChannelId);
     
     if (!telegramChannelId || !this.telegramBot) {
+      //console.log("No mapping found for Slack channel "+slackChannelId+" - ignoring message.");
       return; // No mapping found or telegram bot not set
     }
+    //console.log("Mapping found for Slack channel "+slackChannelId+" - posting message to Telegram channel "+telegramChannelId+".");
 
     // Format the message for Telegram
     let messageText = '';
@@ -82,18 +89,20 @@ class SlackBotHandler {
       const userInfo = message.user ? await client.users.info({ user: message.user }) : null;
       
       if (channelInfo.channel && channelInfo.channel.name) {
-        messageText += `*From Slack #${channelInfo.channel.name}*\n`;
+        // Create a channel link that works in Telegram Markdown
+        const channelLink = `${this.slackWorkspaceUrl}/archives/${channelInfo.channel.id}`;
+        messageText += `*From Slack [`+`#${channelInfo.channel.name}`.replace(/([_*\\[\\]()~\`>#+\\-=|{}.!\\\\])/g, '\\\\$1')+`](${channelLink})*\n`;
       }
       
       if (userInfo && userInfo.user && userInfo.user.real_name) {
-        messageText += `*${userInfo.user.real_name}*: `;
+        messageText += `*${userInfo.user.real_name}*: `.replace(/([_*\\[\\]()~\`>#+\\-=|{}.!\\\\])/g, '\\\\$1');
       }
     } catch (error) {
       console.error('Error fetching Slack channel or user info:', error);
     }
     
     // Add message text
-    messageText += message.text || '';
+    messageText += message.text.replace(/([_*\\[\\]()~\`>#+\\-=|{}.!\\\\])/g, '\\\\$1') || '';
     
     // Process attachments if present
     if (message.attachments && message.attachments.length > 0) {
@@ -121,15 +130,15 @@ class SlackBotHandler {
       parse_mode: 'Markdown'
     };
     
-    // If this is a thread reply and we found the parent message in Telegram, set it as a reply
+    // If this is a thread reply, and we found the parent message in Telegram, set it as a reply
     if (replyToMessageId) {
       telegramOptions.reply_to_message_id = replyToMessageId;
     }
   
-    // Send message to Telegram
+    // Send a message to Telegram
     const telegramMessage = await this.telegramBot.sendMessageToTelegram(
       telegramChannelId,
-      messageText,
+        messageText,
       telegramOptions
     );
     
@@ -145,6 +154,8 @@ class SlackBotHandler {
     });
   }
 
+
+
   setupAdminCommands() {
     // Command to list all mappings
     this.app.command('/list-mappings', async ({ack, respond }) => {
@@ -152,7 +163,7 @@ class SlackBotHandler {
       // current mappings, but we could restrict if needed
       await ack();
       
-      const mappings = this.mappingService.getAllMappings();
+      const mappings = await this.mappingService.getAllMappings();
       
       if (mappings.length === 0) {
         await respond('No channel mappings configured.');
@@ -170,7 +181,7 @@ class SlackBotHandler {
 
     // Command to add a new mapping
     this.app.command('/add-mapping', async ({ command, ack, respond }) => {
-      // Check if user has admin privileges
+      // Check if a user has admin privileges
       if (!this.isUserAdmin(command.user_id)) {
         await ack({
           response_type: 'ephemeral',
@@ -191,7 +202,7 @@ class SlackBotHandler {
       const [telegramChannelId, slackChannelId] = parts;
       
       try {
-        this.mappingService.addMapping(telegramChannelId, slackChannelId);
+        await this.mappingService.addMapping(telegramChannelId, slackChannelId);
         await respond(`Mapping added: Telegram \`${telegramChannelId}\` ↔ Slack \`${slackChannelId}\``);
       } catch (error) {
         await respond(`Error adding mapping: ${error.message}`);
@@ -200,7 +211,7 @@ class SlackBotHandler {
 
     // Command to remove a mapping
     this.app.command('/remove-mapping', async ({ command, ack, respond }) => {
-      // Check if user has admin privileges
+      // Check if a user has admin privileges
       if (!this.isUserAdmin(command.user_id)) {
         await ack({
           response_type: 'ephemeral',
@@ -221,7 +232,7 @@ class SlackBotHandler {
       const [telegramChannelId, slackChannelId] = parts;
       
       try {
-        this.mappingService.removeMapping(telegramChannelId, slackChannelId);
+        await this.mappingService.removeMapping(telegramChannelId, slackChannelId);
         await respond(`Mapping removed: Telegram \`${telegramChannelId}\` ↔ Slack \`${slackChannelId}\``);
       } catch (error) {
         await respond(`Error removing mapping: ${error.message}`);
