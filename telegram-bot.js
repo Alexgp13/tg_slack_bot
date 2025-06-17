@@ -10,7 +10,7 @@ class TelegramBotHandler {
   }
 
   start() {
-    console.log('Starting Telegram bot v0.1.1a...');
+    console.log('Starting Telegram bot v0.9.1...');
     
     // Listen for messages from channels
     this.bot.on('message', async (msg) => {
@@ -56,7 +56,7 @@ class TelegramBotHandler {
     
     // Add sender information if available
     if (msg.chat.title) {
-      messageText += `*From Telegram channel "${msg.chat.title}":*\n\n`;
+      messageText += `From Telegram channel *"${msg.chat.title}":*\n\n`;
     }
     
     // Add message text
@@ -128,12 +128,12 @@ class TelegramBotHandler {
     let messageText = '';
     
     if (msg.chat.title) {
-      messageText += `*From Telegram channel "${msg.chat.title}" (edited):*\n\n`;
+      messageText += `From Telegram channel *"${msg.chat.title}" (edited):*\n\n`;
     }
     
     if (msg.text) {
       messageText += msg.text;
-      console.log("Message from chat:"+msg.chat+" / text:"+msg.text);
+      //console.log("Message from chat:"+msg.chat+" / text:"+msg.text);
     }
     
     // Update the message in Slack
@@ -145,7 +145,7 @@ class TelegramBotHandler {
         parse: 'full'
       });
     } catch (error) {
-      console.error('Error updating Slack message:', error);
+      console.error('Error #148 updating Slack message:', error);
     }
   }
 
@@ -159,7 +159,7 @@ class TelegramBotHandler {
 
       return await this.bot.sendMessage(telegramChannelId, text, sendOptions);
     } catch (error) {
-      console.error('Error sending message to Telegram:', error);
+      console.error('Error #162 sending message to Telegram:', error);
       throw error;
     }
   }
