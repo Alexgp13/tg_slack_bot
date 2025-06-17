@@ -10,7 +10,8 @@ class TelegramBotHandler {
   }
 
   start() {
-    console.log('Starting Telegram bot v0.9.1...');
+    const { version } = require('./package.json');
+    console.log(`Starting Telegram bot v${version}... API key: ${this.token}`);
     
     // Listen for messages from channels
     this.bot.on('message', async (msg) => {
